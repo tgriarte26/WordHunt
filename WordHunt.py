@@ -68,6 +68,11 @@ def get_neighbors(r, c):
 
 def dfs(r, c, visited, current_word, found, grid):
   current_word += grid[r][c].letter.lower()
+  
+  # Limit word length to prevent excessive exploration
+  if len(current_word) > 8:
+    return
+    
   if current_word not in prefixes and current_word not in dictionary:
     return
   
@@ -82,7 +87,9 @@ def dfs(r, c, visited, current_word, found, grid):
       
   visited.remove((r, c))
 
-def find_all_words():
+def find_all_words(grid=None):
+  if grid is None:
+    grid = globals()['grid']
   found = set()
 
   for r in range(rows):
@@ -124,23 +131,31 @@ def place_word(grid, word):
   return False
   
 def generate_board():
+  # Create a board by placing a few words and filling the rest with random letters
   grid = [[Cell("") for _ in range(cols)] for _ in range(rows)]
-  words = get_random_words(dictionary, count=5)
+  
+  # Try to place 3-4 words
+  words_to_place = get_random_words(dictionary, count=4)
+  placed_count = 0
+  
+  for word in words_to_place:
+    if place_word(grid, word):
+      placed_count += 1
+    if placed_count >= 3:  # Stop after placing 3 words
+      break
 
-
-  for word in words:
-    place_word(grid, word)
-
-  letter_pool = (
-      "EEEEEEEEEEEEAAAAAAAIIIIIIIII"
-      "OOOOOOOONNNNNNRRRRRRTTTTTT"
-  )
-
+  # Fill remaining cells with random letters
+  letter_pool = "EEEEEEEEEEEEAAAAAAAIIIIIIIIIOOOOOOOONNNNNNRRRRRRTTTTTT"
+  
   for r in range(rows):
     for c in range(cols):
       if grid[r][c].letter == "":
         grid[r][c].letter = random.choice(letter_pool)
 
+  # Check how many words we have
+  possible_words = find_all_words(grid)
+  print(f"Generated board with {len(possible_words)} possible words (placed {placed_count} words)")
+  
   return grid
 
 grid = generate_board()
@@ -182,7 +197,7 @@ def end_screen(final_score, found_words, all_words):
   while True:
     screen.fill(BG)
     mouse = pygame.mouse.get_pos()
-    
+
     title_font = pygame.font.Font("dogicapixelbold.ttf", 40)
     title = title_font.render("GAME OVER", True, (0, 0, 0))
     title_rect = title.get_rect(center=(WIDTH//2, 50))
@@ -190,7 +205,7 @@ def end_screen(final_score, found_words, all_words):
     
     score_text = font.render(f"Final Score: {final_score}", True, (0, 0, 0))
     screen.blit(score_text, (100, 150))
-  
+    
     found_count = font.render(f"Words Found: {len(found_words)}", True, (0, 0, 0))
     screen.blit(found_count, (100, 200))
     
@@ -206,7 +221,21 @@ def end_screen(final_score, found_words, all_words):
       word_text = font.render(word, True, (0, 150, 0))
       screen.blit(word_text, (120, y_offset))
       y_offset += 30
-      if y_offset > HEIGHT - 200:
+      if y_offset > HEIGHT - 300:
+        break
+    
+    # Show possible words
+    y_offset += 20
+    possible_label = font.render("Possible Words:", True, (0, 0, 0))
+    screen.blit(possible_label, (100, y_offset))
+    y_offset += 40
+    
+    for word in sorted(all_words):
+      color = (0, 150, 0) if word in found_words else (150, 0, 0)
+      word_text = font.render(word, True, color)
+      screen.blit(word_text, (120, y_offset))
+      y_offset += 30
+      if y_offset > HEIGHT - 150:
         break
     
     menu_button = pygame.Rect((WIDTH - 200)//2, HEIGHT - 100, 200, 50)
@@ -382,4 +411,3 @@ def start_menu():
     pygame.display.update()
 
 start_menu()
-        
